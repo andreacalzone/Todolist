@@ -4,6 +4,7 @@ const apiUrl = `https://js1-todo-api.vercel.app/api/todos?apikey=${apiKey}`;
 const todoContainer = document.querySelector(".todo-container");
 const form = document.querySelector(".form");
 const inputTodo = document.querySelector("#input-todo");
+const errorMessage = document.querySelector("#error-message");
 
 const modal = document.createElement("div");
 modal.classList.add("modal");
@@ -23,7 +24,7 @@ async function fetchTodos() {
         if (!response.ok) throw new Error("Kunde inte hämta todos");
 
         const todos = await response.json();
-        todoContainer.innerHTML = ""; 
+        todoContainer.innerHTML = "";
         todos.forEach(addTodoToDOM);
     } catch (error) {
         console.error(error);
@@ -51,14 +52,37 @@ function addTodoToDOM(todo) {
     const checkbox = todoElement.querySelector(".todo-completed");
     const todoName = todoElement.querySelector(".todo-name");
 
-    todoName.addEventListener("click", () => toggleTodoStatus(todo._id, !todo.completed, todoElement));
-    checkbox.addEventListener("change", () => toggleTodoStatus(todo._id, checkbox.checked, todoElement));
+    checkbox.addEventListener("change", async () => {
+        try {
+            checkbox.disabled = true; // Förhindra ytterligare klick under API-anropet
+            const completed = checkbox.checked;
+            await toggleTodoStatus(todo._id, completed);
 
-    todoElement.querySelector(".todo-delete").addEventListener("click", () => {
-        if (!checkbox.checked) {
-            modal.classList.add("show");
+            if (completed) {
+                todoElement.classList.add("completed");
+                todoName.style.textDecoration = "line-through";
+            } else {
+                todoElement.classList.remove("completed");
+                todoName.style.textDecoration = "none";
+            }
+        } catch (error) {
+            checkbox.checked = !checkbox.checked; // Återställ vid fel
+            console.error("Misslyckades att uppdatera todo-status.");
+        } finally {
+            checkbox.disabled = false; // Aktivera checkbox igen
+        }
+    });
+
+    todoElement.querySelector(".todo-delete").addEventListener("click", async () => {
+        if (checkbox.checked) {
+            try {
+                await deleteTodo(todo._id);
+                todoElement.remove();
+            } catch (error) {
+                console.error("Misslyckades att ta bort todo.");
+            }
         } else {
-            deleteTodo(todo._id, todoElement);
+            modal.classList.add("show");
         }
     });
 }
@@ -66,7 +90,7 @@ function addTodoToDOM(todo) {
 async function addTodo() {
     const title = inputTodo.value.trim();
     if (!title) {
-        alert("Du måste skriva något för att lägga till en todo!");
+        showError("Du måste skriva något för att lägga till en todo!");
         return;
     }
 
@@ -81,46 +105,56 @@ async function addTodo() {
 
         const newTodo = await response.json();
         addTodoToDOM(newTodo);
-        inputTodo.value = ""; 
+        inputTodo.value = "";
+        hideError();
     } catch (error) {
         console.error(error);
     }
 }
 
-async function deleteTodo(id, todoElement) {
-    try {
-        const response = await fetch(`${apiUrl}/${id}?apikey=${apiKey}`, { method: "DELETE" });
-        if (!response.ok) throw new Error("Kunde inte ta bort todo");
+async function toggleTodoStatus(id, completed) {
+    console.log("Updating todo:", { id, completed });
 
-        todoElement.remove(); 
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-async function toggleTodoStatus(id, completed, todoElement) {
     try {
-        const response = await fetch(`${apiUrl}/${id}?apikey=${apiKey}`, {
+        const response = await fetch(`https://js1-todo-api.vercel.app/api/todos/${id}?apikey=${apiKey}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ completed }),
         });
 
-        if (!response.ok) throw new Error("Kunde inte uppdatera todo");
+        const responseData = await response.text();
+        console.log("API response:", responseData);
 
-        const checkbox = todoElement.querySelector(".todo-completed");
-        const todoName = todoElement.querySelector(".todo-name");
-
-        if (completed) {
-            todoElement.classList.add("completed");
-            checkbox.checked = true;
-        } else {
-            todoElement.classList.remove("completed");
-            checkbox.checked = false;
+        if (!response.ok) {
+            console.error("API Response Error:", responseData);
+            throw new Error("Kunde inte uppdatera todo-status");
         }
+
+        console.log("Todo updated successfully:", { id, completed });
     } catch (error) {
-        console.error("Fel vid uppdatering av todo status: ", error);
+        console.error("Fel vid uppdatering av todo-status:", error);
+        alert("Det gick inte att uppdatera todo-status. Försök igen senare.");
     }
+}
+
+
+
+
+async function deleteTodo(id) {
+    const response = await fetch(`https://js1-todo-api.vercel.app/api/todos/${id}?apikey=${apiKey}`, { method: "DELETE" });
+
+    if (!response.ok) {
+        throw new Error("Kunde inte ta bort todo");
+    }
+}
+
+function showError(message) {
+    errorMessage.textContent = message;
+    errorMessage.style.display = "block";
+}
+
+function hideError() {
+    errorMessage.style.display = "none";
 }
 
 form.addEventListener("submit", (e) => {

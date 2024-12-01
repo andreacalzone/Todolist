@@ -3,14 +3,17 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: rgb(39, 52, 148);
+    background-color: black;
+	height: 100vh;
     padding-top: 4rem;
 }
 
+
 .headline {
     margin: 0 auto;
-    padding: 2em;
-    width: 400px;
+    padding: 1em;
+    width: 600px;
+    font-size: 1.5rem;
     background-color: rgb(25, 11, 86);
     text-align: center;
     border-radius: 10px;
@@ -65,6 +68,7 @@ body {
 #input-todo {
     width: 70%;
     height: 30px;
+    border-radius: .5rem;
     font-size: 1.5rem;
 }
 
@@ -97,14 +101,16 @@ body {
     border-radius: 10px;
     font-size: 1.2rem;
     pointer-events: auto;
-    background-color: rgb(205, 108, 29); 
+    background-color: transparent;
+    border: 3px solid rgb(205, 108, 29); 
     color: white;
     padding: .5rem;
-    transition: background-color 200ms ease, text-decoration 200ms ease;
+    transition: border 200ms ease, text-decoration 2000ms ease;
 }
 
 .todo.completed {
-    background-color: darkgreen;
+    background-color: transparent;
+    border: 3px solid rgb(14, 137, 43); 
 }
 
 .todo.completed .todo-name {
